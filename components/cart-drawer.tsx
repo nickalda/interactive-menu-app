@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import Image from "next/image"
 import { X, Plus, Minus, ShoppingBag, Trash2 } from "lucide-react"
-import type { Dish } from "@/lib/menu-data"
+import type { Dish } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export type CartLine = { dish: Dish; qty: number }

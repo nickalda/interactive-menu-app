@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import Image from "next/image"
 import { X, Plus, Star, Flame, Clock, Heart, Bookmark } from "lucide-react"
-import type { Dish } from "@/lib/menu-data"
+import type { Dish } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 type DishDetailsSheetProps = {
@@ -26,6 +26,8 @@ export function DishDetailsSheet({
   onAddToCart,
 }: DishDetailsSheetProps) {
   const open = dish !== null
+  const ingredients = dish ? (Array.isArray(dish.ingredients) ? dish.ingredients : []) : []
+  const allergens = dish ? (Array.isArray(dish.allergens) ? dish.allergens : []) : []
 
   useEffect(() => {
     if (!open) return
@@ -87,7 +89,7 @@ export function DishDetailsSheet({
 
               <div className="mt-5 grid grid-cols-4 gap-2">
                 <Stat icon={<Star className="size-4 fill-accent text-accent" />} label="Rating" value={`${dish.rating}`} />
-                <Stat icon={<Clock className="size-4 text-foreground" />} label="Prep" value={dish.prepTime} />
+                <Stat icon={<Clock className="size-4 text-foreground" />} label="Prep" value={dish.prep_time} />
                 <Stat
                   icon={<Flame className={cn("size-4", dish.spicy > 0 ? "text-primary" : "text-muted-foreground")} />}
                   label="Heat"
@@ -99,7 +101,7 @@ export function DishDetailsSheet({
               <div className="mt-6">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-foreground">Ingredients</h3>
                 <div className="flex flex-wrap gap-2">
-                  {dish.ingredients.map((ing) => (
+                  {ingredients.map((ing) => (
                     <span key={ing} className="rounded-full bg-secondary px-3 py-1.5 text-sm text-secondary-foreground">
                       {ing}
                     </span>
@@ -109,9 +111,9 @@ export function DishDetailsSheet({
 
               <div className="mt-5">
                 <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-foreground">Allergens</h3>
-                {dish.allergens.length > 0 ? (
+                {allergens.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {dish.allergens.map((a) => (
+                    {allergens.map((a) => (
                       <span
                         key={a}
                         className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary"

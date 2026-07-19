@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import { Heart, Bookmark, Info, Plus, Star, Flame, Clock, ChevronUp } from "lucide-react"
-import type { Dish } from "@/lib/menu-data"
+import type { Dish } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 type ReelCardProps = {

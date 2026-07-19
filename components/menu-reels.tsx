@@ -1,14 +1,16 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ShoppingBag } from "lucide-react"
-import { menu, categories, type Dish } from "@/lib/menu-data"
+import type { Dish } from "@/lib/types"
 import { ReelCard } from "@/components/reel-card"
 import { DishDetailsSheet } from "@/components/dish-details-sheet"
 import { CartDrawer, type CartLine } from "@/components/cart-drawer"
 import { cn } from "@/lib/utils"
 
 export function MenuReels() {
+  const [menu, setMenu] = useState<Dish[]>([])
+  const [categories, setCategories] = useState<string[]>(["All"])
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [cart, setCart] = useState<Record<string, number>>({})
@@ -16,10 +18,58 @@ export function MenuReels() {
   const [detailsDish, setDetailsDish] = useState<Dish | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let canceled = false
+
+    async function loadMenu() {
+      try {
+        const res = await fetch('/api/menu')
+        if (!res.ok) {
+          const body = await res.text()
+          if (canceled) return
+          setError(`API error ${res.status}: ${body}`)
+          setMenu([])
+          setCategories(['All'])
+          return
+        }
+
+        const data = await res.json()
+        if (canceled) return
+
+        if (data.error || data.warning) {
+          setError(data.error ? `API error: ${data.error}` : `Warning: ${data.warning}`)
+          setMenu([])
+          setCategories(['All'])
+          return
+        }
+
+        setMenu(data.menu ?? [])
+        setCategories([
+          'All',
+          ...new Set((Array.isArray(data.categories) ? data.categories : []).filter(Boolean)),
+        ])
+      } catch (err) {
+        if (canceled) return
+        setError(err instanceof Error ? err.message : String(err))
+        setMenu([])
+        setCategories(['All'])
+      } finally {
+        if (!canceled) setLoading(false)
+      }
+    }
+
+    loadMenu()
+    return () => {
+      canceled = true
+    }
+  }, [])
 
   const visibleDishes = useMemo(
     () => (category === "All" ? menu : menu.filter((d) => d.category === category)),
-    [category],
+    [category, menu],
   )
 
   const cartLines: CartLine[] = useMemo(
@@ -27,7 +77,7 @@ export function MenuReels() {
       menu
         .filter((d) => cart[d.id] > 0)
         .map((d) => ({ dish: d, qty: cart[d.id] })),
-    [cart],
+    [cart, menu],
   )
 
   const cartCount = Object.values(cart).reduce((sum, n) => sum + n, 0)
@@ -120,21 +170,29 @@ export function MenuReels() {
         key={category}
         className="h-[100dvh] w-full snap-y snap-mandatory overflow-y-scroll overscroll-y-contain no-scrollbar"
       >
-        {visibleDishes.map((dish, i) => (
-          <ReelCard
-            key={dish.id}
-            dish={dish}
-            index={i}
-            isFirst={i === 0}
-            liked={liked.has(dish.id)}
-            saved={saved.has(dish.id)}
-            cartQty={cart[dish.id] ?? 0}
-            onToggleLike={() => toggleLike(dish.id)}
-            onToggleSave={() => toggleSave(dish.id)}
-            onOpenDetails={() => setDetailsDish(dish)}
-            onAddToCart={() => addToCart(dish)}
-          />
-        ))}
+        {loading ? (
+          <div className="flex h-[100dvh] items-center justify-center text-white/80">Loading menu...</div>
+        ) : error ? (
+          <div className="flex h-[100dvh] items-center justify-center text-white/80">{error}</div>
+        ) : visibleDishes.length === 0 ? (
+          <div className="flex h-[100dvh] items-center justify-center text-white/80">No dishes found.</div>
+        ) : (
+          visibleDishes.map((dish, i) => (
+            <ReelCard
+              key={dish.id}
+              dish={dish}
+              index={i}
+              isFirst={i === 0}
+              liked={liked.has(dish.id)}
+              saved={saved.has(dish.id)}
+              cartQty={cart[dish.id] ?? 0}
+              onToggleLike={() => toggleLike(dish.id)}
+              onToggleSave={() => toggleSave(dish.id)}
+              onOpenDetails={() => setDetailsDish(dish)}
+              onAddToCart={() => addToCart(dish)}
+            />
+          ))
+        )}
       </div>
 
       {/* Floating cart button */}

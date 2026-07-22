@@ -3,6 +3,7 @@ export type Dish = {
   name: string
   tagline: string
   category: string
+  categoryValue: string
   price: number
   calories: number
   prepTime: string

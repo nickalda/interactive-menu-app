@@ -8,13 +8,20 @@ import { DishDetailsSheet } from "@/components/dish-details-sheet"
 import { CartDrawer, type CartLine } from "@/components/cart-drawer"
 import { cn } from "@/lib/utils"
 
+type CategoryChip = { label: string; value: string }
+
+function normalizeCategory(value: unknown) {
+  const text = typeof value === "string" ? value : value == null ? "" : String(value)
+  return text.trim().toLowerCase()
+}
+
 export function MenuReels() {
   const [menu, setMenu] = useState<Dish[]>([])
-  const [categories, setCategories] = useState<string[]>(["All"])
+  const [categories, setCategories] = useState<CategoryChip[]>([{ label: "All", value: "all" }])
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [cart, setCart] = useState<Record<string, number>>({})
-  const [category, setCategory] = useState<string>("All")
+  const [category, setCategory] = useState<string>("all")
   const [detailsDish, setDetailsDish] = useState<Dish | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
@@ -32,30 +39,49 @@ export function MenuReels() {
           if (canceled) return
           setError(`API error ${res.status}: ${body}`)
           setMenu([])
-          setCategories(['All'])
+          setCategories([{ label: "All", value: "all" }])
           return
         }
 
-        const data = await res.json()
+        const data = (await res.json()) as {
+          menu?: Dish[]
+          categories?: Array<CategoryChip | string>
+          error?: string
+          warning?: string
+        }
         if (canceled) return
 
         if (data.error || data.warning) {
           setError(data.error ? `API error: ${data.error}` : `Warning: ${data.warning}`)
           setMenu([])
-          setCategories(['All'])
+          setCategories([{ label: "All", value: "all" }])
           return
         }
 
+        const normalizedCategories = (Array.isArray(data.categories) ? data.categories : [])
+          .map((entry) => {
+            if (typeof entry === 'string') {
+              const label = entry.trim()
+              return label ? { label, value: label.toLowerCase() } : null
+            }
+
+            if (entry && typeof entry.label === 'string' && typeof entry.value === 'string') {
+              const label = entry.label.trim()
+              const value = entry.value.trim()
+              return label && value ? { label, value } : null
+            }
+
+            return null
+          })
+          .filter((entry): entry is CategoryChip => entry !== null)
+
         setMenu(data.menu ?? [])
-        setCategories([
-          'All',
-          ...new Set((Array.isArray(data.categories) ? data.categories : []).filter(Boolean)),
-        ])
+        setCategories([{ label: "All", value: "all" }, ...normalizedCategories])
       } catch (err) {
         if (canceled) return
         setError(err instanceof Error ? err.message : String(err))
         setMenu([])
-        setCategories(['All'])
+        setCategories([{ label: "All", value: "all" }])
       } finally {
         if (!canceled) setLoading(false)
       }
@@ -67,10 +93,21 @@ export function MenuReels() {
     }
   }, [])
 
-  const visibleDishes = useMemo(
-    () => (category === "All" ? menu : menu.filter((d) => d.category === category)),
-    [category, menu],
-  )
+  const visibleDishes = useMemo(() => {
+    const activeCategory = normalizeCategory(category)
+
+    console.log("[menu filter] selected category:", category)
+    console.log("[menu filter] normalized category:", activeCategory)
+    console.log("[menu filter] dishes:", menu.map((dish) => ({ id: dish.id, category: dish.category, normalized: normalizeCategory(dish.category) })))
+
+    if (activeCategory === "all" || activeCategory === "") {
+      return menu
+    }
+
+    const filtered = menu.filter((dish) => normalizeCategory(dish.categoryValue ?? dish.category) === activeCategory)
+    console.log("[menu filter] filtered dishes:", filtered.map((dish) => dish.name))
+    return filtered
+  }, [category, menu])
 
   const cartLines: CartLine[] = useMemo(
     () =>
@@ -149,17 +186,17 @@ export function MenuReels() {
         <div className="pointer-events-auto -mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar">
           {categories.map((c) => (
             <button
-              key={c}
+              key={c.value}
               type="button"
-              onClick={() => setCategory(c)}
+              onClick={() => setCategory(c.value)}
               className={cn(
                 "shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
-                category === c
+                category === c.value
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-white/20 bg-black/30 text-white backdrop-blur-md",
               )}
             >
-              {c}
+              {c.label}
             </button>
           ))}
         </div>

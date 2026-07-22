@@ -58,13 +58,13 @@ export function DishDetailsSheet({
         aria-modal="true"
         aria-label={dish ? `${dish.name} details` : "Dish details"}
         className={cn(
-          "absolute inset-x-0 bottom-0 mx-auto max-h-[88dvh] w-full max-w-[480px] overflow-y-auto rounded-t-3xl border-t border-border bg-card transition-transform duration-300 no-scrollbar",
+          "absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] w-full max-w-[480px] flex-col overflow-hidden rounded-t-3xl border-t border-border bg-card transition-transform duration-300",
           open ? "translate-y-0" : "translate-y-full",
         )}
       >
         {dish ? (
           <>
-            <div className="relative h-56 w-full">
+            <div className="relative h-56 w-full shrink-0">
               <Image src={dish.image || "/placeholder.svg"} alt={dish.name} fill className="object-cover" sizes="480px" />
               <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
               <button
@@ -80,8 +80,7 @@ export function DishDetailsSheet({
               </span>
             </div>
 
-            <div className="px-5 pb-32 pt-4">
-              <div className="mx-auto -mt-10 mb-3 h-1 w-12 rounded-full bg-white/20" />
+            <div className="flex-1 overflow-y-auto px-5 pb-4 pt-4 no-scrollbar">
               <h2 className="font-display text-4xl uppercase leading-none tracking-tight text-foreground">
                 {dish.name}
               </h2>
@@ -128,8 +127,7 @@ export function DishDetailsSheet({
               </div>
             </div>
 
-            {/* Sticky action bar */}
-            <div className="fixed inset-x-0 bottom-0 mx-auto flex max-w-[480px] items-center gap-3 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-md">
+            <div className="flex items-center gap-3 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-md">
               <button
                 type="button"
                 onClick={onToggleLike}

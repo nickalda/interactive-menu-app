@@ -92,65 +92,81 @@ export function ReelCard({
         </span>
       </div>
 
-      {/* Right action rail */}
-      <div className="absolute bottom-44 right-3 z-20 flex flex-col items-center gap-5">
-        <ActionButton
-          label={liked ? "Unlike dish" : "Like dish"}
-          onClick={onToggleLike}
-          active={liked}
-          activeClass="border-primary/60 bg-primary/25"
-          caption={formatLikes(dish.likes + (liked ? 1 : 0))}
-        >
-          <Heart className={cn("size-6", liked && "fill-primary text-primary")} />
-        </ActionButton>
+      <div className="absolute inset-0 z-10">
+        {/* Bottom gradient for readability */}
+        <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-        <ActionButton
-          label={saved ? "Remove favorite" : "Save favorite"}
-          onClick={onToggleSave}
-          active={saved}
-          activeClass="border-accent/60 bg-accent/25"
-          caption="Save"
-        >
-          <Bookmark className={cn("size-6", saved && "fill-accent text-accent")} />
-        </ActionButton>
+        {/* Right side actions */}
+        <div className="absolute right-4 bottom-20 flex flex-col items-center gap-5">
+          <ActionButton
+            label={liked ? "Unlike dish" : "Like dish"}
+            onClick={onToggleLike}
+            active={liked}
+            activeClass="border-primary/60 bg-primary/25"
+            caption={formatLikes(dish.likes + (liked ? 1 : 0))}
+          >
+            <Heart className={cn("size-6", liked && "fill-primary text-primary")} />
+          </ActionButton>
 
-        <ActionButton label="View details" onClick={onOpenDetails} caption="Info">
-          <Info className="size-6" />
-        </ActionButton>
-      </div>
+          <ActionButton
+            label={saved ? "Remove favorite" : "Save favorite"}
+            onClick={onToggleSave}
+            active={saved}
+            activeClass="border-accent/60 bg-accent/25"
+            caption="Save"
+          >
+            <Bookmark className={cn("size-6", saved && "fill-accent text-accent")} />
+          </ActionButton>
 
-      {/* Bottom info block */}
-      <div className="relative z-10 w-full px-4 pb-24">
-        <div className="mb-2 flex items-center gap-3 text-xs font-medium text-white/80">
-          <span className="flex items-center gap-1">
-            <Clock className="size-3.5" />
-            {dish.prepTime}
-          </span>
-          <span className="flex items-center gap-1">
-            <Flame className={cn("size-3.5", dish.spicy > 0 ? "text-primary" : "text-white/50")} />
-            {dish.spicy === 0 ? "Mild" : dish.spicy === 1 ? "Kick" : dish.spicy === 2 ? "Spicy" : "Fire"}
-          </span>
-          <span>{dish.calories} cal</span>
+          <ActionButton label="View details" onClick={onOpenDetails} caption="Info">
+            <Info className="size-6" />
+          </ActionButton>
+
+          <ActionButton
+            label="Add to order"
+            onClick={onAddToCart}
+            active={cartQty > 0}
+            activeClass="border-red-500/80 bg-red-600 text-white"
+            caption="Add"
+          >
+            <Plus className="size-6" />
+          </ActionButton>
         </div>
 
-        <h2 className="font-display text-5xl uppercase leading-[0.95] tracking-tight text-white text-balance">
-          {dish.name}
-        </h2>
-        <p className="mt-2 max-w-[80%] text-pretty text-sm text-white/85">{dish.tagline}</p>
+        {/* Bottom left dish information */}
+        <div className="absolute bottom-8 left-4 right-20">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-xs font-medium text-white/80">
+            <span className="flex items-center gap-1">
+              <Clock className="size-3.5" />
+              {dish.prepTime}
+            </span>
 
-        <div className="mt-5 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onAddToCart}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98]"
-          >
-            <Plus className="size-5" />
-            Add to order
-            {cartQty > 0 ? (
-              <span className="ml-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-sm">{cartQty}</span>
-            ) : null}
-          </button>
-          <div className="rounded-full bg-white/10 px-4 py-3.5 text-lg font-bold text-white backdrop-blur-md">
+            <span className="flex items-center gap-1">
+              <Flame
+                className={cn(
+                  "size-3.5",
+                  dish.spicy > 0 ? "text-primary" : "text-white/50",
+                )}
+              />
+              {dish.spicy === 0
+                ? "Mild"
+                : dish.spicy === 1
+                ? "Kick"
+                : dish.spicy === 2
+                ? "Spicy"
+                : "Fire"}
+            </span>
+
+            <span>{dish.calories} cal</span>
+          </div>
+
+          <h2 className="font-display text-5xl uppercase leading-[0.9] tracking-tight text-white">
+            {dish.name}
+          </h2>
+
+          <p className="mt-2 max-w-sm text-sm text-white/85">{dish.tagline}</p>
+
+          <div className="mt-3 inline-flex rounded-full bg-white/15 px-4 py-2 text-lg font-bold text-white backdrop-blur-md">
             ${dish.price.toFixed(2)}
           </div>
         </div>

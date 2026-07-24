@@ -1,28 +1,21 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Download, ShoppingBag } from "lucide-react"
+import { Download, Home, Compass, Bookmark, ShoppingBag } from "lucide-react"
 import type { Dish } from "@/lib/types"
 import { ReelCard } from "@/components/reel-card"
 import { DishDetailsSheet } from "@/components/dish-details-sheet"
 import { CartDrawer, type CartLine } from "@/components/cart-drawer"
 import { cn } from "@/lib/utils"
 
-type CategoryChip = { label: string; value: string }
-
-function normalizeCategory(value: unknown) {
-  const text = typeof value === "string" ? value : value == null ? "" : String(value)
-  return text.trim().toLowerCase()
-}
+type NavTab = "home" | "discover" | "saved" | "cart"
 
 export function MenuReels() {
   const [menu, setMenu] = useState<Dish[]>([])
-  const [categories, setCategories] = useState<CategoryChip[]>([{ label: "All", value: "all" }])
-  const [showSavedOnly, setShowSavedOnly] = useState(false)
+  const [activeTab, setActiveTab] = useState<NavTab>("home")
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [cart, setCart] = useState<Record<string, number>>({})
-  const [category, setCategory] = useState<string>("all")
   const [detailsDish, setDetailsDish] = useState<Dish | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
@@ -40,13 +33,11 @@ export function MenuReels() {
           if (canceled) return
           setError(`API error ${res.status}: ${body}`)
           setMenu([])
-          setCategories([{ label: "All", value: "all" }])
           return
         }
 
         const data = (await res.json()) as {
           menu?: Dish[]
-          categories?: Array<CategoryChip | string>
           error?: string
           warning?: string
         }
@@ -55,34 +46,14 @@ export function MenuReels() {
         if (data.error || data.warning) {
           setError(data.error ? `API error: ${data.error}` : `Warning: ${data.warning}`)
           setMenu([])
-          setCategories([{ label: "All", value: "all" }])
           return
         }
 
-        const normalizedCategories = (Array.isArray(data.categories) ? data.categories : [])
-          .map((entry) => {
-            if (typeof entry === 'string') {
-              const label = entry.trim()
-              return label ? { label, value: label.toLowerCase() } : null
-            }
-
-            if (entry && typeof entry.label === 'string' && typeof entry.value === 'string') {
-              const label = entry.label.trim()
-              const value = entry.value.trim()
-              return label && value ? { label, value } : null
-            }
-
-            return null
-          })
-          .filter((entry): entry is CategoryChip => entry !== null)
-
         setMenu(data.menu ?? [])
-        setCategories([{ label: "All", value: "all" }, ...normalizedCategories])
       } catch (err) {
         if (canceled) return
         setError(err instanceof Error ? err.message : String(err))
         setMenu([])
-        setCategories([{ label: "All", value: "all" }])
       } finally {
         if (!canceled) setLoading(false)
       }
@@ -94,19 +65,36 @@ export function MenuReels() {
     }
   }, [])
 
-  const visibleDishes = useMemo(() => {
-    const activeCategory = normalizeCategory(category)
+  const homeDishes = useMemo(() => {
+    const groups = new Map<number, Dish[]>()
+    menu.forEach((dish) => {
+      const likes = dish.likes ?? 0
+      const group = groups.get(likes) ?? []
+      group.push(dish)
+      groups.set(likes, group)
+    })
+    return Array.from(groups.entries())
+      .sort((a, b) => b[0] - a[0])
+      .flatMap(([_, dishes]) => {
+        for (let i = dishes.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[dishes[i], dishes[j]] = [dishes[j], dishes[i]]
+        }
+        return dishes
+      })
+  }, [menu])
 
-    if (showSavedOnly) {
+  const visibleDishes = useMemo(() => {
+    if (activeTab === "home") {
+      return homeDishes
+    }
+
+    if (activeTab === "saved") {
       return menu.filter((dish) => saved.has(dish.id))
     }
 
-    if (activeCategory === "all" || activeCategory === "") {
-      return menu
-    }
-
-    return menu.filter((dish) => normalizeCategory(dish.categoryValue ?? dish.category) === activeCategory)
-  }, [category, menu, saved, showSavedOnly])
+    return menu
+  }, [activeTab, homeDishes, menu, saved])
 
   const cartLines: CartLine[] = useMemo(
     () =>
@@ -168,127 +156,134 @@ export function MenuReels() {
   }
 
   return (
-    <main className="relative mx-auto h-[100dvh] w-full max-w-[480px] overflow-hidden bg-background">
-      {/* Top bar */}
+    <main className="relative mx-auto h-screen w-full max-w-[480px] bg-background">
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-col gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pb-6 pt-4">
         <div className="pointer-events-auto flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1">
             <span className="font-display text-2xl uppercase tracking-tight text-white">Crave</span>
             <span className="font-display text-2xl uppercase tracking-tight text-primary">worthy</span>
           </div>
-          <div className="flex items-center gap-2">
-            <a
-              href="/menu_PDF/Grave_Worthy_Menu.pdf"
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-md transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
-            >
-              <Download className="size-4" />
-              <span>Download PDF</span>
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                setShowSavedOnly(true)
-                setCategory("all")
-              }}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors",
-                showSavedOnly
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-white/20 bg-black/30 text-white backdrop-blur-md",
-              )}
-            >
-              Show only saved
-            </button>
-          </div>
-        </div>
-
-        {/* Category chips */}
-        <div className="pointer-events-auto -mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar">
-          <button
-            type="button"
-            onClick={() => {
-              setShowSavedOnly(false)
-              setCategory("all")
-            }}
-            className={cn(
-              "shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
-              !showSavedOnly && category === "all"
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-white/20 bg-black/30 text-white backdrop-blur-md",
-            )}
-          >
-            All
-          </button>
-
-          {categories.filter((c) => c.value !== "all").map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => {
-                setShowSavedOnly(false)
-                setCategory(c.value)
-              }}
-              className={cn(
-                "shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
-                !showSavedOnly && category === c.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-white/20 bg-black/30 text-white backdrop-blur-md",
-              )}
-            >
-              {c.label}
-            </button>
-          ))}
 
         </div>
+
       </header>
 
-      {/* Reels scroll container */}
-      <div
-        key={category}
-        className="h-[100dvh] w-full snap-y snap-mandatory overflow-y-scroll overscroll-y-contain no-scrollbar"
-      >
+      <div className="absolute inset-0 top-0 pb-28 pt-24">
         {loading ? (
-          <div className="flex h-[100dvh] items-center justify-center text-white/80">Loading menu...</div>
+          <div className="flex h-full items-center justify-center text-white/80">Loading menu...</div>
         ) : error ? (
-          <div className="flex h-[100dvh] items-center justify-center text-white/80">{error}</div>
-        ) : visibleDishes.length === 0 ? (
-          <div className="flex h-[100dvh] items-center justify-center text-white/80">No dishes found.</div>
+          <div className="flex h-full items-center justify-center text-white/80">{error}</div>
+        ) : activeTab === "cart" ? (
+          <div className="px-4 py-4 text-white">
+            <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.2em] text-white/60">Your order</p>
+                  <p className="text-xl font-semibold">{cartCount > 0 ? `${cartCount} item${cartCount > 1 ? "s" : ""}` : "No items yet"}</p>
+                </div>
+                <span className="rounded-full bg-primary/15 px-3 py-1 text-sm font-semibold text-primary">{cartCount > 0 ? `${cartCount} selected` : "Empty"}</span>
+              </div>
+
+              {cartLines.length > 0 ? (
+                <div className="space-y-3">
+                  {cartLines.map((line) => (
+                    <div key={line.dish.id} className="flex items-center justify-between rounded-2xl bg-black/20 px-3 py-3">
+                      <div>
+                        <p className="font-medium text-white">{line.dish.name}</p>
+                        <p className="text-sm text-white/60">Qty {line.qty}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-primary">x{line.qty}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm text-white/70">
+                  Tap dishes from the menu and they will appear here.
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
-          visibleDishes.map((dish, i) => (
-            <ReelCard
-              key={dish.id}
-              dish={dish}
-              index={i}
-              isFirst={i === 0}
-              liked={liked.has(dish.id)}
-              saved={saved.has(dish.id)}
-              cartQty={cart[dish.id] ?? 0}
-              onToggleLike={() => toggleLike(dish.id)}
-              onToggleSave={() => toggleSave(dish.id)}
-              onOpenDetails={() => setDetailsDish(dish)}
-              onAddToCart={() => addToCart(dish)}
-            />
-          ))
+          <div key={activeTab} className="absolute inset-0 overflow-y-auto snap-y snap-mandatory overscroll-y-contain touch-pan-y no-scrollbar">
+            {visibleDishes.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-white/80">No dishes found.</div>
+            ) : (
+              visibleDishes.map((dish, i) => (
+                <ReelCard
+                  key={dish.id}
+                  dish={dish}
+                  index={i}
+                  isFirst={i === 0}
+                  liked={liked.has(dish.id)}
+                  saved={saved.has(dish.id)}
+                  cartQty={cart[dish.id] ?? 0}
+                  onToggleLike={() => toggleLike(dish.id)}
+                  onToggleSave={() => toggleSave(dish.id)}
+                  onOpenDetails={() => setDetailsDish(dish)}
+                  onAddToCart={() => addToCart(dish)}
+                />
+              ))
+            )}
+          </div>
         )}
       </div>
 
-      {/* Floating cart button */}
-      <button
-        type="button"
-        onClick={() => setCartOpen(true)}
-        aria-label={`Open order, ${cartCount} items`}
-        className="absolute bottom-6 right-4 z-30 flex items-center gap-2 rounded-full bg-accent px-5 py-3.5 font-bold text-accent-foreground shadow-lg transition-transform active:scale-95"
-      >
-        <ShoppingBag className="size-5" />
-        {cartCount > 0 ? (
-          <span className="min-w-5 rounded-full bg-accent-foreground/15 px-2 text-center text-sm">{cartCount}</span>
-        ) : (
-          <span className="text-sm">Order</span>
-        )}
-      </button>
+      <nav className="absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-black/80 px-2 py-3 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[440px] items-end justify-between gap-1">
+          {[
+            { key: "home", label: "Home", icon: Home },
+            { key: "discover", label: "Discover", icon: Compass },
+            { key: "download", label: "PDF", icon: Download },
+            { key: "saved", label: "Saved", icon: Bookmark },
+            { key: "cart", label: "Cart", icon: ShoppingBag },
+          ].map((item) => {
+            const Icon = item.icon
+
+            if (item.key === "download") {
+              return (
+                <a
+                  key={item.key}
+                  href="/menu_PDF/Grave_Worthy_Menu.pdf"
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded-full bg-primary px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wide text-primary-foreground shadow-lg"
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    <Icon className="size-5" />
+                    <span className="text-[10px]">{item.label}</span>
+                  </span>
+                </a>
+              )
+            }
+
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => {
+                  if (item.key === "cart") {
+                    setActiveTab("cart")
+                    setCartOpen(true)
+                  } else {
+                    setActiveTab(item.key as NavTab)
+                    setCartOpen(false)
+                  }
+                }}
+                className={cn(
+                  "flex-1 rounded-full px-2.5 py-2 text-center text-[10px] font-medium uppercase tracking-wide transition-colors",
+                  activeTab === item.key ? "bg-white/15 text-white" : "text-white/70",
+                )}
+              >
+                <span className="flex flex-col items-center justify-center gap-1">
+                  <Icon className="size-5" />
+                  <span className="text-[10px] leading-none">{item.label}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
 
       {/* Toast */}
       <div

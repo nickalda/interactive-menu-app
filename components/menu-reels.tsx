@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ShoppingBag } from "lucide-react"
+import { Download, ShoppingBag } from "lucide-react"
 import type { Dish } from "@/lib/types"
 import { ReelCard } from "@/components/reel-card"
 import { DishDetailsSheet } from "@/components/dish-details-sheet"
@@ -18,6 +18,7 @@ function normalizeCategory(value: unknown) {
 export function MenuReels() {
   const [menu, setMenu] = useState<Dish[]>([])
   const [categories, setCategories] = useState<CategoryChip[]>([{ label: "All", value: "all" }])
+  const [showSavedOnly, setShowSavedOnly] = useState(false)
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [cart, setCart] = useState<Record<string, number>>({})
@@ -96,18 +97,16 @@ export function MenuReels() {
   const visibleDishes = useMemo(() => {
     const activeCategory = normalizeCategory(category)
 
-    console.log("[menu filter] selected category:", category)
-    console.log("[menu filter] normalized category:", activeCategory)
-    console.log("[menu filter] dishes:", menu.map((dish) => ({ id: dish.id, category: dish.category, normalized: normalizeCategory(dish.category) })))
+    if (showSavedOnly) {
+      return menu.filter((dish) => saved.has(dish.id))
+    }
 
     if (activeCategory === "all" || activeCategory === "") {
       return menu
     }
 
-    const filtered = menu.filter((dish) => normalizeCategory(dish.categoryValue ?? dish.category) === activeCategory)
-    console.log("[menu filter] filtered dishes:", filtered.map((dish) => dish.name))
-    return filtered
-  }, [category, menu])
+    return menu.filter((dish) => normalizeCategory(dish.categoryValue ?? dish.category) === activeCategory)
+  }, [category, menu, saved, showSavedOnly])
 
   const cartLines: CartLine[] = useMemo(
     () =>
@@ -172,26 +171,69 @@ export function MenuReels() {
     <main className="relative mx-auto h-[100dvh] w-full max-w-[480px] overflow-hidden bg-background">
       {/* Top bar */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-col gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pb-6 pt-4">
-        <div className="pointer-events-auto flex items-center justify-between">
+        <div className="pointer-events-auto flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1">
             <span className="font-display text-2xl uppercase tracking-tight text-white">Crave</span>
             <span className="font-display text-2xl uppercase tracking-tight text-primary">worthy</span>
           </div>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
-            {saved.size > 0 ? `${saved.size} saved` : "Tap to explore"}
-          </span>
+          <div className="flex items-center gap-2">
+            <a
+              href="/menu_PDF/Grave_Worthy_Menu.pdf"
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-md transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+            >
+              <Download className="size-4" />
+              <span>Download PDF</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSavedOnly(true)
+                setCategory("all")
+              }}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors",
+                showSavedOnly
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-white/20 bg-black/30 text-white backdrop-blur-md",
+              )}
+            >
+              Show only saved
+            </button>
+          </div>
         </div>
 
         {/* Category chips */}
         <div className="pointer-events-auto -mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar">
-          {categories.map((c) => (
+          <button
+            type="button"
+            onClick={() => {
+              setShowSavedOnly(false)
+              setCategory("all")
+            }}
+            className={cn(
+              "shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
+              !showSavedOnly && category === "all"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-white/20 bg-black/30 text-white backdrop-blur-md",
+            )}
+          >
+            All
+          </button>
+
+          {categories.filter((c) => c.value !== "all").map((c) => (
             <button
               key={c.value}
               type="button"
-              onClick={() => setCategory(c.value)}
+              onClick={() => {
+                setShowSavedOnly(false)
+                setCategory(c.value)
+              }}
               className={cn(
                 "shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
-                category === c.value
+                !showSavedOnly && category === c.value
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-white/20 bg-black/30 text-white backdrop-blur-md",
               )}
@@ -199,6 +241,7 @@ export function MenuReels() {
               {c.label}
             </button>
           ))}
+
         </div>
       </header>
 

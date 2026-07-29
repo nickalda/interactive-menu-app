@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Download, Home, Compass, Bookmark, ShoppingBag } from "lucide-react"
-import type { Dish } from "@/lib/types"
+import type { Dish, DishComment } from "@/lib/types"
 import { ReelCard } from "@/components/reel-card"
 import { DishDetailsSheet } from "@/components/dish-details-sheet"
+import { DishCommentsSheet } from "@/components/dish-comments-sheet"
 import { CartDrawer, type CartLine } from "@/components/cart-drawer"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +18,9 @@ export function MenuReels() {
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [cart, setCart] = useState<Record<string, number>>({})
   const [detailsDish, setDetailsDish] = useState<Dish | null>(null)
+  const [commentsDish, setCommentsDish] = useState<Dish | null>(null)
+  const [comments, setComments] = useState<DishComment[]>([])
+  const [commentsLoading, setCommentsLoading] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -122,6 +126,34 @@ export function MenuReels() {
     })
   }
 
+  async function loadComments(dish: Dish) {
+    setCommentsLoading(true)
+    setCommentsDish(dish)
+    setComments([])
+
+    try {
+      const { data, error } = await (await import("@/lib/supabase")).supabase
+        .from("DishComment")
+        .select("id, dish_id, comment, rating, created_at, likes")
+        .eq("dish_id", dish.id)
+        .eq("is_approved", true)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Failed to load comments", error)
+        setComments([])
+        return
+      }
+
+      setComments((data ?? []) as DishComment[])
+    } catch (err) {
+      console.error("Failed to load comments", err)
+      setComments([])
+    } finally {
+      setCommentsLoading(false)
+    }
+  }
+
   function showToast(msg: string) {
     setToast(msg)
     window.clearTimeout((showToast as unknown as { _t?: number })._t)
@@ -220,6 +252,7 @@ export function MenuReels() {
                   onToggleLike={() => toggleLike(dish.id)}
                   onToggleSave={() => toggleSave(dish.id)}
                   onOpenDetails={() => setDetailsDish(dish)}
+                  onOpenComments={() => void loadComments(dish)}
                   onAddToCart={() => addToCart(dish)}
                 />
               ))
@@ -305,6 +338,16 @@ export function MenuReels() {
         onToggleLike={() => detailsDish && toggleLike(detailsDish.id)}
         onToggleSave={() => detailsDish && toggleSave(detailsDish.id)}
         onAddToCart={() => detailsDish && addToCart(detailsDish)}
+      />
+
+      <DishCommentsSheet
+        dish={commentsDish}
+        comments={comments}
+        loading={commentsLoading}
+        onClose={() => {
+          setCommentsDish(null)
+          setComments([])
+        }}
       />
 
       <CartDrawer

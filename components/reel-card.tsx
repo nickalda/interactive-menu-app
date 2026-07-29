@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { Heart, Bookmark, Info, Plus, Star, Flame, Clock, ChevronUp } from "lucide-react"
+import { Heart, Bookmark, Info, Plus, Star, Flame, Clock, ChevronUp, MessageCircle } from "lucide-react"
 import type { Dish } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +15,7 @@ type ReelCardProps = {
   onToggleLike: () => void
   onToggleSave: () => void
   onOpenDetails: () => void
+  onOpenComments: () => void
   onAddToCart: () => void
 }
 
@@ -65,6 +66,7 @@ export function ReelCard({
   onToggleLike,
   onToggleSave,
   onOpenDetails,
+  onOpenComments,
   onAddToCart,
 }: ReelCardProps) {
   return (
@@ -120,6 +122,10 @@ export function ReelCard({
 
           <ActionButton label="View details" onClick={onOpenDetails} caption="Info">
             <Info className="size-6" />
+          </ActionButton>
+
+          <ActionButton label="View comments" onClick={onOpenComments} caption="Comments">
+            <MessageCircle className="size-6" />
           </ActionButton>
 
           <ActionButton

@@ -15,3 +15,12 @@ export type Dish = {
   allergens: string[]
   likes: number
 }
+
+export type DishComment = {
+  id: string | number
+  dish_id: string | number
+  comment: string
+  rating: number
+  created_at: string
+  likes: number
+}

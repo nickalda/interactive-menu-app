@@ -348,6 +348,11 @@ export function MenuReels() {
           setCommentsDish(null)
           setComments([])
         }}
+        onCommentAdded={() => {
+          if (commentsDish) {
+            void loadComments(commentsDish)
+          }
+        }}
       />
 
       <CartDrawer

@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect } from "react"
-import { Heart, MessageCircle, Star, X } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Heart, MessageCircle, Send, Star, X } from "lucide-react"
 import type { Dish, DishComment } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -10,10 +10,15 @@ type DishCommentsSheetProps = {
   comments: DishComment[]
   loading: boolean
   onClose: () => void
+  onCommentAdded?: () => void
 }
 
-export function DishCommentsSheet({ dish, comments, loading, onClose }: DishCommentsSheetProps) {
+export function DishCommentsSheet({ dish, comments, loading, onClose, onCommentAdded }: DishCommentsSheetProps) {
   const open = dish !== null
+  const [draft, setDraft] = useState("")
+  const [rating, setRating] = useState(5)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -25,6 +30,51 @@ export function DishCommentsSheet({ dish, comments, loading, onClose }: DishComm
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [open, onClose])
+
+  useEffect(() => {
+    if (!open) {
+      setDraft("")
+      setRating(5)
+      setSubmitError(null)
+    }
+  }, [open])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+
+    if (!dish || !draft.trim()) return
+
+    setSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const response = await fetch("/api/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dish_id: dish.id,
+          comment: draft.trim(),
+          rating,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to save your comment.")
+      }
+
+      setDraft("")
+      setRating(5)
+      onCommentAdded?.()
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Unable to save your comment.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div
@@ -116,6 +166,46 @@ export function DishCommentsSheet({ dish, comments, loading, onClose }: DishComm
                   ))}
                 </div>
               )}
+
+              <form onSubmit={handleSubmit} className="mt-5 rounded-2xl border border-border bg-secondary/50 p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Leave a comment</h3>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, index) => {
+                      const value = index + 1
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setRating(value)}
+                          className="rounded-full p-1"
+                          aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
+                        >
+                          <Star className={cn("size-4", value <= rating ? "fill-accent text-accent" : "text-muted-foreground")} />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Share your experience with this dish..."
+                  className="mt-3 min-h-24 w-full rounded-2xl border border-border bg-background px-3 py-3 text-sm text-foreground outline-none ring-0"
+                />
+
+                {submitError ? <p className="mt-2 text-sm text-destructive">{submitError}</p> : null}
+
+                <button
+                  type="submit"
+                  disabled={submitting || !draft.trim()}
+                  className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Send className="size-4" />
+                  {submitting ? "Saving..." : "Post comment"}
+                </button>
+              </form>
             </div>
           </>
         ) : null}

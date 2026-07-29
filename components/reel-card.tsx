@@ -82,7 +82,7 @@ export function ReelCard({
       />
 
       {/* Legibility gradients */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/50" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/40" />
 
       {/* Rating badge below the header */}
       <div className="absolute left-4 top-28 flex items-center gap-2">
@@ -92,12 +92,12 @@ export function ReelCard({
         </span>
       </div>
 
-      <div className="absolute inset-0 z-10">
+      <div className="pointer-events-none absolute inset-0 z-40">
         {/* Bottom gradient for readability */}
-        <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
         {/* Right side actions */}
-        <div className="absolute right-4 bottom-20 flex flex-col items-center gap-5">
+        <div className="pointer-events-auto absolute right-4 bottom-20 flex flex-col items-center gap-5">
           <ActionButton
             label={liked ? "Unlike dish" : "Like dish"}
             onClick={onToggleLike}
@@ -134,7 +134,7 @@ export function ReelCard({
         </div>
 
         {/* Bottom left dish information */}
-        <div className="absolute bottom-8 left-4 right-20">
+        <div className="pointer-events-auto absolute bottom-28 left-4 right-20 z-40">
           <div className="mb-3 flex flex-wrap items-center gap-3 text-xs font-medium text-white/80">
             <span className="flex items-center gap-1">
               <Clock className="size-3.5" />
@@ -160,15 +160,16 @@ export function ReelCard({
             <span>{dish.calories} cal</span>
           </div>
 
-          <h2 className="font-display text-5xl uppercase leading-[0.9] tracking-tight text-white">
-            {dish.name}
-          </h2>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="font-display text-5xl uppercase leading-[0.9] tracking-tight text-white min-w-0 flex-1">
+              {dish.name}
+            </h2>
+            <div className="text-lg font-semibold text-white/90">
+              ${dish.price.toFixed(2)}
+            </div>
+          </div>
 
           <p className="mt-2 max-w-sm text-sm text-white/85">{dish.tagline}</p>
-
-          <div className="mt-3 inline-flex rounded-full bg-white/15 px-4 py-2 text-lg font-bold text-white backdrop-blur-md">
-            ${dish.price.toFixed(2)}
-          </div>
         </div>
       </div>
 

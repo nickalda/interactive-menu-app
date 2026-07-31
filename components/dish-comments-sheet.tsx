@@ -19,6 +19,8 @@ export function DishCommentsSheet({ dish, comments, loading, onClose, onCommentA
   const [rating, setRating] = useState(5)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [localComments, setLocalComments] = useState<DishComment[]>([])
+  const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!open) return
@@ -38,6 +40,21 @@ export function DishCommentsSheet({ dish, comments, loading, onClose, onCommentA
       setSubmitError(null)
     }
   }, [open])
+
+  useEffect(() => {
+    setLocalComments(comments)
+  }, [comments])
+
+  function toggleCommentLike(comment: DishComment) {
+    const commentId = String(comment.id)
+
+    if (likedCommentIds.has(commentId)) return
+
+    setLikedCommentIds((prev) => new Set(prev).add(commentId))
+    setLocalComments((prev) =>
+      prev.map((item) => (String(item.id) === commentId ? { ...item, likes: item.likes + 1 } : item)),
+    )
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -131,20 +148,24 @@ export function DishCommentsSheet({ dish, comments, loading, onClose, onCommentA
                 <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                   Loading comments...
                 </div>
-              ) : comments.length === 0 ? (
+              ) : localComments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                   No comments yet for this dish.
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {comments.map((comment) => (
-                    <article key={comment.id} className="rounded-2xl border border-border bg-secondary/60 p-4">
+                  {localComments.map((comment) => {
+                    const commentId = String(comment.id)
+                    const isLiked = likedCommentIds.has(commentId)
+
+                    return (
+                      <article key={comment.id} className="rounded-2xl border border-border bg-secondary/60 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-1">
                           {Array.from({ length: 5 }).map((_, index) => (
                             <Star
                               key={`${comment.id}-${index}`}
-                              className={cn("size-4", index < comment.rating ? "fill-accent text-accent" : "text-muted-foreground")}
+                              className={cn("size-4", index < comment.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground")}
                             />
                           ))}
                         </div>
@@ -159,11 +180,19 @@ export function DishCommentsSheet({ dish, comments, loading, onClose, onCommentA
                       <p className="mt-3 text-sm leading-6 text-foreground">{comment.comment}</p>
 
                       <div className="mt-3 flex items-center gap-1 text-sm text-muted-foreground">
-                        <Heart className="size-4" />
+                        <button
+                          type="button"
+                          onClick={() => toggleCommentLike(comment)}
+                          aria-label="Like comment"
+                          className="rounded-full p-1 transition-colors"
+                        >
+                          <Heart className={cn("size-4", isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
+                        </button>
                         <span>{comment.likes}</span>
                       </div>
                     </article>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
 
@@ -181,7 +210,7 @@ export function DishCommentsSheet({ dish, comments, loading, onClose, onCommentA
                           className="rounded-full p-1"
                           aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
                         >
-                          <Star className={cn("size-4", value <= rating ? "fill-accent text-accent" : "text-muted-foreground")} />
+                          <Star className={cn("size-4", value <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground")} />
                         </button>
                       )
                     })}

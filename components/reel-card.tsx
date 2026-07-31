@@ -114,10 +114,10 @@ export function ReelCard({
             label={saved ? "Remove favorite" : "Save favorite"}
             onClick={onToggleSave}
             active={saved}
-            activeClass="border-accent/60 bg-accent/25"
-            caption="Save"
+            activeClass="border-white/80 bg-white text-black"
+            caption={saved ? "Saved" : "Save"}
           >
-            <Bookmark className={cn("size-6", saved && "fill-accent text-accent")} />
+            <Bookmark className={cn("size-6", saved && "fill-black text-black")} />
           </ActionButton>
 
           <ActionButton label="View details" onClick={onOpenDetails} caption="Info">
@@ -166,8 +166,8 @@ export function ReelCard({
             <span>{dish.calories} cal</span>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <h2 className="font-display text-5xl uppercase leading-[0.9] tracking-tight text-white min-w-0 flex-1">
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            <h2 className="font-display text-5xl uppercase leading-[0.9] tracking-tight text-white">
               {dish.name}
             </h2>
             <div className="text-lg font-semibold text-white/90">

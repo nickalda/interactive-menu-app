@@ -188,8 +188,8 @@ export function MenuReels() {
   }
 
   return (
-    <main className="relative mx-auto h-screen w-full max-w-[480px] bg-background">
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-col gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pb-6 pt-4">
+    <main className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-hidden bg-background">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-col gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pb-6 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="pointer-events-auto flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1">
             <span className="font-display text-2xl uppercase tracking-tight text-white">Crave</span>
@@ -261,7 +261,7 @@ export function MenuReels() {
         )}
       </div>
 
-      <nav className="absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-black/80 px-2 py-3 backdrop-blur-xl">
+      <nav className="absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-black/80 px-2 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
         <div className="mx-auto flex max-w-[440px] items-end justify-between gap-1">
           {[
             { key: "home", label: "Home", icon: Home },

@@ -7,6 +7,7 @@ import { ReelCard } from "@/components/reel-card"
 import { DishDetailsSheet } from "@/components/dish-details-sheet"
 import { DishCommentsSheet } from "@/components/dish-comments-sheet"
 import { CartDrawer, type CartLine } from "@/components/cart-drawer"
+import { ExploreLanding } from "@/components/explore-landing"
 import { cn } from "@/lib/utils"
 
 type NavTab = "home" | "discover" | "saved" | "cart"
@@ -25,6 +26,8 @@ export function MenuReels() {
   const [toast, setToast] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedDiet, setSelectedDiet] = useState<string | null>(null)
 
   useEffect(() => {
     let canceled = false
@@ -88,17 +91,41 @@ export function MenuReels() {
       })
   }, [menu])
 
+  const filteredMenu = useMemo(() => {
+    let nextMenu = menu
+
+    if (selectedCategory) {
+      nextMenu = nextMenu.filter((dish) => dish.category === selectedCategory || dish.categoryValue === selectedCategory)
+    }
+
+    if (selectedDiet) {
+      nextMenu = nextMenu.filter((dish) => {
+        const normalized = dish.description.toLowerCase()
+        if (selectedDiet === "vegan") return normalized.includes("vegan") || normalized.includes("plant")
+        if (selectedDiet === "vegetarian") return normalized.includes("vegetarian") || normalized.includes("vegetable") || normalized.includes("cheese")
+        if (selectedDiet === "gluten-free") return normalized.includes("gluten free") || normalized.includes("gluten-free") || normalized.includes("without gluten")
+        return true
+      })
+    }
+
+    return nextMenu
+  }, [menu, selectedCategory, selectedDiet])
+
   const visibleDishes = useMemo(() => {
     if (activeTab === "home") {
       return homeDishes
     }
 
     if (activeTab === "saved") {
-      return menu.filter((dish) => saved.has(dish.id))
+      return filteredMenu.filter((dish) => saved.has(dish.id))
     }
 
-    return menu
-  }, [activeTab, homeDishes, menu, saved])
+    if (activeTab === "discover") {
+      return filteredMenu
+    }
+
+    return filteredMenu
+  }, [activeTab, filteredMenu, homeDishes, saved])
 
   const cartLines: CartLine[] = useMemo(
     () =>
@@ -187,6 +214,69 @@ export function MenuReels() {
     })
   }
 
+  function handleSelectCategory(category: string) {
+    setSelectedCategory(category)
+    setSelectedDiet(null)
+    setActiveTab("discover")
+    setCartOpen(false)
+  }
+
+  function handleSelectDiet(diet: string) {
+    setSelectedDiet(diet)
+    setSelectedCategory(null)
+    setActiveTab("discover")
+    setCartOpen(false)
+  }
+
+  function getCategoryImage(key: string) {
+    const normalized = key.toLowerCase()
+    const imageMap: Record<string, string> = {
+      burgers: "/categories/burgers.png",
+      "breakfast & brunch": "/categories/breakfast.png",
+      drinks: "/categories/drinks.png",
+      tacos: "/categories/tacos.png",
+    }
+
+    return imageMap[normalized] ?? "/placeholder.svg"
+  }
+
+  const exploreCategories = useMemo(() => {
+    const counts = new Map<string, number>()
+    menu.forEach((dish) => {
+      const key = dish.category || dish.categoryValue
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    })
+
+    return Array.from(counts.entries()).map(([key, count]) => ({
+      id: key,
+      label: key,
+      description: `Browse ${key.toLowerCase()} dishes from the menu.`,
+      image: getCategoryImage(key),
+      count,
+    }))
+  }, [menu])
+
+  const exploreDiets = useMemo(() => [
+    {
+      id: "vegan",
+      label: "Vegan",
+      description: "Plant-based favourites",
+      count: menu.filter((dish) => dish.description.toLowerCase().includes("vegan") || dish.description.toLowerCase().includes("plant")).length,
+    },
+    {
+      id: "vegetarian",
+      label: "Vegetarian",
+      description: "Vegetable-led dishes",
+      count: menu.filter((dish) => dish.description.toLowerCase().includes("vegetarian") || dish.description.toLowerCase().includes("vegetable") || dish.description.toLowerCase().includes("cheese")).length,
+    },
+    {
+      id: "gluten-free",
+      label: "Gluten-free",
+      description: "No gluten ingredients",
+      count: menu.filter((dish) => dish.description.toLowerCase().includes("gluten free") || dish.description.toLowerCase().includes("gluten-free") || dish.description.toLowerCase().includes("without gluten")).length,
+    },
+  ], [menu])
+
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-hidden bg-background">
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-col gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 pb-6 pt-[max(1rem,env(safe-area-inset-top))]">
@@ -231,6 +321,52 @@ export function MenuReels() {
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm text-white/70">
                   Tap dishes from the menu and they will appear here.
+                </div>
+              )}
+            </div>
+          </div>
+        ) : activeTab === "discover" ? (
+          <div key={activeTab} className="absolute inset-0 overflow-y-auto bg-background/95">
+            <ExploreLanding
+              categories={exploreCategories}
+              diets={exploreDiets}
+              onSelectCategory={handleSelectCategory}
+              onSelectDiet={handleSelectDiet}
+            />
+            {selectedCategory || selectedDiet ? (
+              <div className="mx-auto mt-2 max-w-6xl px-4 pb-8 sm:px-6">
+                <div className="rounded-2xl border border-border bg-card/80 p-4 text-sm text-muted-foreground">
+                  Showing {filteredMenu.length} dish{filteredMenu.length === 1 ? "" : "es"} for your selection.
+                </div>
+              </div>
+            ) : null}
+            <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+              {filteredMenu.length === 0 ? (
+                <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-border text-muted-foreground">
+                  No dishes found for this selection.
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredMenu.map((dish) => (
+                    <button
+                      key={dish.id}
+                      type="button"
+                      onClick={() => setDetailsDish(dish)}
+                      className="rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{dish.name}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{dish.tagline}</p>
+                        </div>
+                        <span className="text-sm font-semibold text-primary">${dish.price.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                        <span>{dish.category}</span>
+                        <span>{dish.prepTime}</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

@@ -47,7 +47,7 @@ export function ExploreLanding({
           What are you craving today?
         </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground text-pretty sm:text-lg">
-          Pick a category to explore the menu, or jump straight to dishes that fit the way you eat.
+          Pick a category to explore the menu.
         </p>
       </section>
 
@@ -55,7 +55,7 @@ export function ExploreLanding({
         <h2 id="categories-heading" className="sr-only">
           Browse by category
         </h2>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {categories.map((cat) => (
             <button
               key={cat.id}
@@ -67,17 +67,12 @@ export function ExploreLanding({
                 src={cat.image || "/placeholder.svg"}
                 alt={cat.label}
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                sizes="(max-width: 640px) 50vw, 50vw"
                 className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.07]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent" />
-              <div className="relative z-10 flex h-full items-end p-5">
-                <div className="w-full">
-                  <span className="text-xs font-medium uppercase tracking-[0.25em] text-primary">
-                    {cat.count} dishes
-                  </span>
-                  <h3 className="mt-2 font-serif text-2xl leading-tight text-white">{cat.label}</h3>
-                </div>
+              <div className="relative z-10 flex h-full items-end p-4 sm:p-5">
+                <h3 className="font-serif text-xl leading-tight text-white sm:text-2xl">{cat.label}</h3>
               </div>
             </button>
           ))}

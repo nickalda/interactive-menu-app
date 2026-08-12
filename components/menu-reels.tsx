@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useEffect, useMemo, useState } from "react"
 import { Download, Home, Compass, Bookmark, ShoppingBag } from "lucide-react"
 import type { Dish, DishComment } from "@/lib/types"
@@ -28,6 +29,7 @@ export function MenuReels() {
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedDiet, setSelectedDiet] = useState<string | null>(null)
+  const [selectedDishes, setSelectedDishes] = useState<Dish[]>([])
 
   useEffect(() => {
     let canceled = false
@@ -192,6 +194,16 @@ export function MenuReels() {
     showToast(`${dish.name} added to order`)
   }
 
+  function addToSelection(dish: Dish) {
+    setSelectedDishes((prev) => {
+      if (prev.some((item) => item.id === dish.id)) {
+        return prev
+      }
+      return [...prev, dish]
+    })
+    addToCart(dish)
+  }
+
   function incItem(id: string) {
     setCart((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))
   }
@@ -327,49 +339,81 @@ export function MenuReels() {
           </div>
         ) : activeTab === "discover" ? (
           <div key={activeTab} className="absolute inset-0 overflow-y-auto bg-background/95">
-            <ExploreLanding
-              categories={exploreCategories}
-              diets={exploreDiets}
-              onSelectCategory={handleSelectCategory}
-              onSelectDiet={handleSelectDiet}
-            />
-            {selectedCategory || selectedDiet ? (
-              <div className="mx-auto mt-2 max-w-6xl px-4 pb-8 sm:px-6">
-                <div className="rounded-2xl border border-border bg-card/80 p-4 text-sm text-muted-foreground">
-                  Showing {filteredMenu.length} dish{filteredMenu.length === 1 ? "" : "es"} for your selection.
+            {selectedCategory ? (
+              <div className="mx-auto max-w-6xl px-4 pb-24 pt-12">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory(null)}
+                    className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
+                  >
+                    ← Back
+                  </button>
+                  <h2 className="flex-1 text-center font-serif text-2xl text-foreground">
+                    {selectedCategory}
+                  </h2>
+                  <span className="min-w-[2.5rem] rounded-full bg-primary/10 px-2.5 py-1 text-center text-xs font-semibold uppercase tracking-wide text-primary">
+                    {filteredMenu.length}
+                  </span>
                 </div>
-              </div>
-            ) : null}
-            <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-              {filteredMenu.length === 0 ? (
-                <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-border text-muted-foreground">
-                  No dishes found for this selection.
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredMenu.map((dish) => (
-                    <button
-                      key={dish.id}
-                      type="button"
-                      onClick={() => setDetailsDish(dish)}
-                      className="rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{dish.name}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">{dish.tagline}</p>
+
+                {filteredMenu.length === 0 ? (
+                  <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground">
+                    No dishes found in this category.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {filteredMenu.map((dish) => (
+                      <div
+                        key={dish.id}
+                        className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+                      >
+                        <div className="relative h-28 w-full">
+                          <Image
+                            src={dish.image || "/placeholder.svg"}
+                            alt={dish.name}
+                            fill
+                            sizes="(max-width: 640px) 50vw, 25vw"
+                            className="object-cover"
+                          />
                         </div>
-                        <span className="text-sm font-semibold text-primary">${dish.price.toFixed(2)}</span>
+                        <div className="space-y-3 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-semibold leading-tight text-foreground">{dish.name}</p>
+                            <span className="shrink-0 text-sm font-semibold text-primary">${dish.price.toFixed(2)}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => addToCart(dish)}
+                              className="flex-1 rounded-full bg-primary px-2.5 py-2 text-xs font-semibold uppercase tracking-wide text-primary-foreground"
+                            >
+                              Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDetailsDish(dish)}
+                              className="flex-1 rounded-full border border-border bg-background px-2.5 py-2 text-xs font-semibold uppercase tracking-wide text-foreground"
+                            >
+                              Info
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-4 flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                        <span>{dish.category}</span>
-                        <span>{dish.prepTime}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <ExploreLanding
+                  categories={exploreCategories}
+                  diets={exploreDiets}
+                  onSelectCategory={handleSelectCategory}
+                  onSelectDiet={handleSelectDiet}
+                />
+              </>
+            )}
           </div>
         ) : (
           <div key={activeTab} className="absolute inset-0 overflow-y-auto snap-y snap-mandatory overscroll-y-contain touch-pan-y no-scrollbar">

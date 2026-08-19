@@ -247,6 +247,9 @@ export function MenuReels() {
       "breakfast & brunch": "/categories/breakfast.png",
       drinks: "/categories/drinks.png",
       tacos: "/categories/tacos.png",
+      pizza: "/categories/pepperoni-pizza.png",
+      sides: "/categories/loaded-fries.png",
+      chicken: "/categories/crispy-chicken.png",
     }
 
     return imageMap[normalized] ?? "/placeholder.svg"

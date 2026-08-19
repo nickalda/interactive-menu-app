@@ -1,10 +1,17 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { X, Plus, Star, Flame, Clock, Heart, Bookmark } from "lucide-react"
+import Script from "next/script"
+import { X, Plus, Star, Flame, Clock, Heart, Bookmark, ScanSearch } from "lucide-react"
 import type { Dish } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+const sharedArModelPath = "/3D/burger+3d+model.glb"
+
+type ModelViewerElement = HTMLElement & {
+  activateAR?: () => Promise<void> | void
+}
 
 type DishDetailsSheetProps = {
   dish: Dish | null
@@ -28,6 +35,9 @@ export function DishDetailsSheet({
   const open = dish !== null
   const ingredients = dish ? (Array.isArray(dish.ingredients) ? dish.ingredients : []) : []
   const allergens = dish ? (Array.isArray(dish.allergens) ? dish.allergens : []) : []
+  const modelViewerRef = useRef<ModelViewerElement | null>(null)
+  const [arReady, setArReady] = useState(false)
+  const [arError, setArError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -38,6 +48,49 @@ export function DishDetailsSheet({
     return () => window.removeEventListener("keydown", onKey)
   }, [open, onClose])
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (customElements.get("model-viewer")) {
+      setArReady(true)
+      return
+    }
+
+    customElements.whenDefined("model-viewer").then(() => {
+      setArReady(true)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!open) {
+      setArError(null)
+    }
+  }, [open])
+
+  async function openArExperience() {
+    if (typeof window === "undefined") return
+
+    const userAgent = window.navigator.userAgent.toLowerCase()
+    const isMobileArBrowser = /android|iphone|ipad|ipod/.test(userAgent)
+
+    if (!isMobileArBrowser) {
+      setArError("AR opens on Android and iPhone/iPad browsers. Use a mobile device to launch the camera.")
+      return
+    }
+
+    if (!arReady || !modelViewerRef.current?.activateAR) {
+      setArError("The AR viewer is still loading. Try again in a moment.")
+      return
+    }
+
+    setArError(null)
+
+    try {
+      await modelViewerRef.current.activateAR()
+    } catch {
+      setArError("This browser could not launch AR. Use Chrome on Android or Safari/Chrome on iPhone/iPad.")
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -46,6 +99,13 @@ export function DishDetailsSheet({
       )}
       aria-hidden={!open}
     >
+      <Script
+        type="module"
+        src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"
+        strategy="afterInteractive"
+        onLoad={() => setArReady(true)}
+      />
+
       <button
         type="button"
         aria-label="Close details"
@@ -86,6 +146,25 @@ export function DishDetailsSheet({
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">{dish.description}</p>
 
+              <div className="mt-4 rounded-3xl border border-primary/20 bg-primary/10 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-wide text-foreground">Augmented Reality</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Open the camera and place this dish in your space.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openArExperience}
+                    className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!dish}
+                  >
+                    <ScanSearch className="size-4" />
+                    View in AR
+                  </button>
+                </div>
+                {arError ? <p className="mt-2 text-xs font-medium text-primary">{arError}</p> : null}
+              </div>
+
               <div className="mt-5 grid grid-cols-4 gap-2">
                 <Stat icon={<Star className="size-4 fill-accent text-accent" />} label="Rating" value={`${dish.rating}`} />
                 <Stat icon={<Clock className="size-4 text-foreground" />} label="Prep" value={dish.prep_time} />
@@ -125,6 +204,18 @@ export function DishDetailsSheet({
                   <p className="text-sm text-muted-foreground">No common allergens.</p>
                 )}
               </div>
+
+              <model-viewer
+                ref={modelViewerRef}
+                src={sharedArModelPath}
+                ar
+                ar-modes="webxr scene-viewer quick-look"
+                camera-controls
+                touch-action="pan-y"
+                shadow-intensity="1"
+                alt={`${dish.name} augmented reality model`}
+                className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
+              />
             </div>
 
             <div className="flex items-center gap-3 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-md">

@@ -13,6 +13,53 @@ import { cn } from "@/lib/utils"
 
 type NavTab = "home" | "discover" | "saved" | "cart"
 
+type RawDish = Record<string, unknown>
+type CategoryRow = { id: string | number; categoryName: string }
+
+const normalizeStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string")
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === "string")
+      }
+    } catch {
+      // not JSON
+    }
+    return value.split(",").map((item) => item.trim()).filter(Boolean)
+  }
+
+  return []
+}
+
+const normalizeMenuItem = (dish: RawDish, categoryLookup: Map<string, string>): Dish => {
+  const rawCategory = dish.category
+  const categoryValue = typeof rawCategory === "string" || typeof rawCategory === "number" ? String(rawCategory) : ""
+  const category = categoryLookup.get(categoryValue) ?? (typeof rawCategory === "string" ? rawCategory : String(rawCategory ?? ""))
+
+  return {
+    id: String(dish.id ?? ""),
+    name: typeof dish.name === "string" ? dish.name : "",
+    tagline: typeof dish.tagline === "string" ? dish.tagline : "",
+    category,
+    categoryValue,
+    price: typeof dish.price === "number" ? dish.price : Number(dish.price ?? 0),
+    calories: typeof dish.calories === "number" ? dish.calories : Number(dish.calories ?? 0),
+    prepTime: typeof dish.prep_time === "string" ? dish.prep_time : String(dish.prepTime ?? dish.prep_time ?? ""),
+    spicy: typeof dish.spicy === "number" ? dish.spicy : Number(dish.spicy ?? 0),
+    rating: typeof dish.rating === "number" ? dish.rating : Number(dish.rating ?? 0),
+    image: typeof dish.image === "string" ? dish.image : "",
+    description: typeof dish.description === "string" ? dish.description : "",
+    ingredients: normalizeStringArray(dish.ingredients),
+    allergens: normalizeStringArray(dish.allergens),
+    likes: typeof dish.likes === "number" ? dish.likes : Number(dish.likes ?? 0),
+  }
+}
+
 export function MenuReels() {
   const [menu, setMenu] = useState<Dish[]>([])
   const [activeTab, setActiveTab] = useState<NavTab>("home")
@@ -34,13 +81,46 @@ export function MenuReels() {
   useEffect(() => {
     let canceled = false
 
+    async function loadMenuFromSupabase() {
+      const { supabase } = await import("@/lib/supabase")
+      const [menuResponse, categoryResponse] = await Promise.all([
+        supabase
+          .from("menu")
+          .select("id, name, tagline, category, price, calories, prep_time, spicy, rating, image, description, ingredients, allergens, likes"),
+        supabase.from("REF_category").select("id, categoryName"),
+      ])
+
+      const { data: menuData, error: menuError } = menuResponse
+      const { data: categoryData, error: categoryError } = categoryResponse
+      if (menuError || categoryError) {
+        throw new Error((menuError ?? categoryError)?.message ?? "Unable to load menu from Supabase")
+      }
+
+      const categoryLookup = new Map<string, string>()
+      ;(categoryData as CategoryRow[] | null)?.forEach((category) => {
+        const id = String(category.id)
+        const label = category.categoryName?.trim()
+        if (!id || !label) return
+        categoryLookup.set(id, label)
+      })
+
+      return (menuData ?? []).map((dish) => normalizeMenuItem(dish, categoryLookup))
+    }
+
     async function loadMenu() {
       try {
-        const res = await fetch('/api/menu')
+        const res = await fetch("/api/menu")
         if (!res.ok) {
+          if (res.status === 404) {
+            const fallbackMenu = await loadMenuFromSupabase()
+            if (canceled) return
+            setMenu(fallbackMenu)
+            return
+          }
+
           const body = await res.text()
           if (canceled) return
-          setError(`API error ${res.status}: ${body}`)
+          setError(`API error ${res.status}: ${body.slice(0, 240)}`)
           setMenu([])
           return
         }
@@ -54,7 +134,7 @@ export function MenuReels() {
 
         if (data.error || data.warning) {
           setError(data.error ? `API error: ${data.error}` : `Warning: ${data.warning}`)
-          setMenu([])
+          setMenu(data.menu ?? [])
           return
         }
 
@@ -459,7 +539,7 @@ export function MenuReels() {
               return (
                 <a
                   key={item.key}
-                  href="/menu_PDF/Grave_Worthy_Menu.pdf"
+                  href="/Menu_PDF/Grave_Worthy_Menu.pdf"
                   download
                   target="_blank"
                   rel="noopener noreferrer"

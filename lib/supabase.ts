@@ -11,7 +11,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 type SupportedBody = BodyInit | null | undefined
 
-const toNodeHeaders = (headers: Headers) => Object.fromEntries(headers.entries())
+const toNodeHeaders = (headers: Headers) => {
+  const nodeHeaders = Object.fromEntries(headers.entries()) as Record<string, string>
+  // Node's https client does not transparently decompress response bodies.
+  // Force identity encoding so Supabase returns plain JSON payloads.
+  nodeHeaders['accept-encoding'] = 'identity'
+  return nodeHeaders
+}
 
 const readRequestBody = async (body: SupportedBody) => {
   if (!body) return undefined
